@@ -9,13 +9,7 @@
 import SwiftUI
 import Mantis
 
-public enum ImageSlideDataType {
-    case data
-    case image
-    case url
-}
-
-public struct ImageSlideView<DataType: Sendable>: View {
+public struct ImageSlideView<ItemType: Sendable>: View {
     
     @State private var selection: Int = 0
     @State private var cropImage: [UIImage] = []
@@ -23,13 +17,13 @@ public struct ImageSlideView<DataType: Sendable>: View {
     
     @Binding private var isPresented: Bool
     
-    private let originalImage: [DataType]
+    private let originalImage: [ItemType]
     
     private var onCompleteClosure: (([UIImage]) -> Void)?
     
     public init(
         isPresented: Binding<Bool>,
-        item: [DataType]
+        item: [ItemType]
     ) {
         self._isPresented = isPresented
         self.originalImage = item
@@ -38,11 +32,6 @@ public struct ImageSlideView<DataType: Sendable>: View {
     public var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-//                UIComponentsSharedAsset.Icons.icoArrowLeft.swiftUIImage
-//                    .resizable()
-//                    .renderingMode(.template)
-//                    .foregroundStyle(.grayFF1)
-//                    .frame(width: 32, height: 32)
                 
                 Button {
                     isPresented = false
@@ -53,7 +42,6 @@ public struct ImageSlideView<DataType: Sendable>: View {
                 Spacer()
                 
                 Text(getCount())
-//                    .font(.m24)
                     .foregroundStyle(.white)
                 
                 Spacer()
@@ -112,7 +100,7 @@ public struct ImageSlideView<DataType: Sendable>: View {
     }
     
     @MainActor
-    func getUIImage(item: DataType) async throws -> UIImage {
+    func getUIImage(item: ItemType) async throws -> UIImage {
         switch item {
         case let imageData as Data:
             if let image = UIImage(data: imageData) {
@@ -139,7 +127,7 @@ public struct ImageSlideView<DataType: Sendable>: View {
         }
     }
     
-    func getCount() -> String {
+    private func getCount() -> String {
         if cropImage.count > 0 {
             return "\(selection + 1)/\(cropImage.count)"
         } else {
@@ -147,8 +135,8 @@ public struct ImageSlideView<DataType: Sendable>: View {
         }
     }
     
-    func onCompleted(_ items: @escaping (([UIImage]) -> Void)) -> ImageSlideView<DataType> {
-        var view: ImageSlideView<DataType> = self
+    public func onCompleted(_ items: @escaping (([UIImage]) -> Void)) -> ImageSlideView<ItemType> {
+        var view: ImageSlideView<ItemType> = self
         view.onCompleteClosure = items
         return view
     }

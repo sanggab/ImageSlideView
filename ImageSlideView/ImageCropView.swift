@@ -15,10 +15,10 @@ public struct ImageCropView: UIViewControllerRepresentable {
     @Binding var image: UIImage
     
     public func makeUIViewController(context: Context) -> UIViewController {
-        var config = Mantis.Config()
+        var config: Mantis.Config = .init()
         config.cropShapeType = .rect
         config.presetFixedRatioType = .alwaysUsingOnePresetFixedRatio(ratio: 4.0 / 3.0)
-        let cropViewController = Mantis.cropViewController(image: image, config: config)
+        let cropViewController: Mantis.CropViewController = Mantis.cropViewController(image: image, config: config)
         cropViewController.delegate = context.coordinator
         return cropViewController
     }
@@ -32,7 +32,7 @@ public struct ImageCropView: UIViewControllerRepresentable {
     }
     
     public class Coordinator: NSObject, CropViewControllerDelegate {
-        @Binding var image: UIImage
+        @Binding private var image: UIImage
         
         public init(image: Binding<UIImage>) {
             self._image = image
