@@ -8,19 +8,29 @@
 
 import SwiftUI
 
-public struct ImageSlideView: View {
+public enum ImageSlideDataType {
+    case data
+    case image
+//    case url
+}
+
+public struct ImageSlideView<DataType: Sendable>: View {
     
 //    public let
     @State private var selection: Int = 0
     @State private var cropImage: [UIImage] = []
-    let image: [UIImage]
+    @State private var isPresented: Bool = false
+//    @State private var selectedImage:
+    let image: [DataType]
+    
+    let dataType: ImageSlideDataType
     
     public init(
-        image: [UIImage]
+        image: [DataType],
+        dataType: ImageSlideDataType
     ) {
-//        self.selection = selection
-//        self.cropImage = cropImage
         self.image = image
+        self.dataType = dataType
     }
     
     public var body: some View {
@@ -51,10 +61,8 @@ public struct ImageSlideView: View {
             .frame(height: 50)
             
             TabView(selection: $selection) {
-                ForEach(0..<image.count, id: \.self) { data in
-                    Image(uiImage: image[data])
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
+                ForEach(0..<image.count, id: \.self) { index in
+                    getImage(index: index)
                         .overlay(alignment: .bottom) {
                             Text("수정하기")
                                 .foregroundStyle(.mint)
@@ -64,6 +72,9 @@ public struct ImageSlideView: View {
                                         .fill(.yellow)
                                 }
                                 .padding(.bottom, 25)
+                                .onTapGesture {
+                                    isPresented = true
+                                }
                         }
                 }
             }
@@ -73,13 +84,45 @@ public struct ImageSlideView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.black)
+//        .fullScreenCover(isPresented: $isPresented) {
+//            ImageCropView(image: image[selection])
+//        }
+    }
+    
+    @ViewBuilder
+    func getImage(index: Int) -> some View {
+        switch dataType {
+        case .data:
+            if let data = image[index] as? Data, let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                EmptyView()
+            }
+        case .image:
+            if let image = image[index] as? UIImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                EmptyView()
+            }
+//        case .url:
+//            if let urlString = image[index] as? String,
+//            let url = URL(string: urlString) {
+//                
+//            } else {
+//                EmptyView()
+//            }
+        }
     }
 }
 
 
 #Preview {
-    ImageSlideView(image: [
+    ImageSlideView<UIImage>(image: [
         UIImage(named: "도화가3")!,
         UIImage(named: "도화가4")!
-    ])
+    ], dataType: .image)
 }

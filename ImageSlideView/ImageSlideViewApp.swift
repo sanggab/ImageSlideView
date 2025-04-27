@@ -11,7 +11,10 @@ import SwiftUI
 struct ImageSlideViewApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ImageSlideView<UIImage>(image: [
+                UIImage(named: "도화가3")!,
+                UIImage(named: "도화가4")!
+            ], dataType: .image)
         }
     }
 }
