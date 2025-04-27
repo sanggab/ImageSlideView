@@ -10,57 +10,53 @@ import SwiftUI
 import Mantis
 import Kingfisher
 
-struct ImageCropView: UIViewControllerRepresentable {
+public struct ImageCropView: UIViewControllerRepresentable {
     
-    var image: UIImage
+    @Binding var image: UIImage
     
-    func makeUIViewController(context: Context) -> UIViewController {
+    public func makeUIViewController(context: Context) -> UIViewController {
         var config = Mantis.Config()
         config.cropShapeType = .rect
         config.presetFixedRatioType = .alwaysUsingOnePresetFixedRatio(ratio: 4.0 / 3.0)
-//        let image = UIImage
         let cropViewController = Mantis.cropViewController(image: image, config: config)
         cropViewController.delegate = context.coordinator
         return cropViewController
     }
 
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+    public func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
         
     }
     
-    func makeCoordinator() -> Coordinator {
-        return Coordinator()
+    public func makeCoordinator() -> Coordinator {
+        return Coordinator(image: $image)
     }
     
-    class Coordinator: NSObject, CropViewControllerDelegate {
-        func cropViewControllerDidCrop(_ cropViewController: Mantis.CropViewController, cropped: UIImage, transformation: Mantis.Transformation, cropInfo: Mantis.CropInfo) {
-            print("\(#function) cropViewController: \(cropViewController)")
-            print("\(#function) cropped: \(cropped)")
-            print("\(#function) transformation: \(transformation)")
-            print("\(#function) cropInfo: \(cropInfo)")
+    public class Coordinator: NSObject, CropViewControllerDelegate {
+        @Binding var image: UIImage
+        
+        public init(image: Binding<UIImage>) {
+            self._image = image
+        }
+        
+        public func cropViewControllerDidCrop(_ cropViewController: Mantis.CropViewController, cropped: UIImage, transformation: Mantis.Transformation, cropInfo: Mantis.CropInfo) {
+            self.image = cropped
             cropViewController.dismiss(animated: true)
         }
         
-        func cropViewControllerDidFailToCrop(_ cropViewController: Mantis.CropViewController, original: UIImage) {
-            print("\(#function) original: \(original)")
+        public func cropViewControllerDidFailToCrop(_ cropViewController: Mantis.CropViewController, original: UIImage) {
+            
         }
         
-        func cropViewControllerDidCancel(_ cropViewController: Mantis.CropViewController, original: UIImage) {
-            print("\(#function) original: \(original)")
+        public func cropViewControllerDidCancel(_ cropViewController: Mantis.CropViewController, original: UIImage) {
             cropViewController.dismiss(animated: true)
         }
         
-        func cropViewControllerDidBeginResize(_ cropViewController: Mantis.CropViewController) {
-            print("\(#function) cropViewController: \(cropViewController)")
+        public func cropViewControllerDidBeginResize(_ cropViewController: Mantis.CropViewController) {
+            
         }
         
-        func cropViewControllerDidEndResize(_ cropViewController: Mantis.CropViewController, original: UIImage, cropInfo: Mantis.CropInfo) {
-            print("\(#function) cropViewController: \(cropViewController)")
-            print("\(#function) original: \(original)")
-            print("\(#function) cropInfo: \(cropInfo)")
-//            cropViewController.dismiss(animated: true)
+        public func cropViewControllerDidEndResize(_ cropViewController: Mantis.CropViewController, original: UIImage, cropInfo: Mantis.CropInfo) {
+            
         }
-        
-        
     }
 }

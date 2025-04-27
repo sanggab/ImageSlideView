@@ -8,7 +8,6 @@
 
 import SwiftUI
 import Mantis
-import Kingfisher
 
 public enum ImageSlideDataType {
     case data
@@ -18,22 +17,22 @@ public enum ImageSlideDataType {
 
 public struct ImageSlideView<DataType: Sendable>: View {
     
-//    public let
     @State private var selection: Int = 0
     @State private var cropImage: [UIImage] = []
-    @State private var isPresented: Bool = false
-//    @State private var
-//    @State private var selectedImage:
-    let image: [DataType]
+    @State private var showCropVC: Bool = false
     
-    let dataType: ImageSlideDataType
+    @Binding private var isPresented: Bool
+    
+    private let originalImage: [DataType]
+    
+    private var onCompleteClosure: (([UIImage]) -> Void)?
     
     public init(
-        image: [DataType],
-        dataType: ImageSlideDataType
+        isPresented: Binding<Bool>,
+        item: [DataType]
     ) {
-        self.image = image
-        self.dataType = dataType
+        self._isPresented = isPresented
+        self.originalImage = item
     }
     
     public var body: some View {
@@ -45,134 +44,136 @@ public struct ImageSlideView<DataType: Sendable>: View {
 //                    .foregroundStyle(.grayFF1)
 //                    .frame(width: 32, height: 32)
                 
-                Text("뒤로가기")
+                Button {
+                    isPresented = false
+                } label: {
+                    Text("뒤로가기")
+                }
                 
                 Spacer()
                 
-                Text("\(selection + 1)/\(image.count)")
+                Text(getCount())
 //                    .font(.m24)
                     .foregroundStyle(.white)
                 
                 Spacer()
                 
-                Text("완료")
-//                    .font(.m24)
-//                    .foregroundStyle(.org400)
-                    .foregroundStyle(.white)
+                Button {
+                    onCompleteClosure?(cropImage)
+                    isPresented = false
+                } label: {
+                    Text("완료")
+                }
+
             }
             .padding(.horizontal, 20)
             .frame(height: 50)
             
             TabView(selection: $selection) {
-                ForEach(0..<image.count, id: \.self) { index in
-                    Image(uiImage: getUIImage(index: index))
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .overlay(alignment: .bottom) {
-                            Text("수정하기")
-                                .foregroundStyle(.mint)
-                                .padding(.all, 5)
-                                .background {
-                                    Capsule()
-                                        .fill(.yellow)
-                                }
-                                .padding(.bottom, 25)
-                                .onTapGesture {
-                                    isPresented = true
-                                }
-                        }
+                Group {
+                    ForEach(0..<cropImage.count, id: \.self) { index in
+                        Image(uiImage: cropImage[index])
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .overlay(alignment: .bottom) {
+                                Text("수정하기")
+                                    .foregroundStyle(.mint)
+                                    .padding(.all, 5)
+                                    .background {
+                                        Capsule()
+                                            .fill(.yellow)
+                                    }
+                                    .padding(.bottom, 25)
+                                    .onTapGesture {
+                                        showCropVC = true
+                                    }
+                            }
+                    }
                 }
+                .padding(.top, -50)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .padding(.top, -50)
-            
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.black)
-        .fullScreenCover(isPresented: $isPresented) {
-            ImageCropView(image: getUIImage(index: selection))
+        .fullScreenCover(isPresented: $showCropVC) {
+            ImageCropView(image: $cropImage[selection])
         }
-    }
-    
-    @ViewBuilder
-    func getImage(index: Int) -> some View {
-        switch dataType {
-        case .data:
-            if let data = image[safe: index] as? Data, let image = UIImage(data: data) {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .onAppear {
-                        cropImage.append(image)
-                    }
-            } else {
-                EmptyView()
-            }
-        case .image:
-            if let image = image[safe: index] as? UIImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .onAppear {
-                        cropImage.append(image)
-                    }
-            } else {
-                EmptyView()
-            }
-        case .url:
-            if let urlString = image[safe: selection] as? String,
-               let url = URL(string: urlString),
-               let data = try? Data(contentsOf: url),
-               let uiImage = UIImage(data: data) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .onAppear {
-                        cropImage.append(uiImage)
-                    }
-            } else {
-                EmptyView()
+        .task {
+            do {
+                let cropImages: [UIImage] = try await self.originalImage.asyncMap { item in
+                    return try await getUIImage(item: item)
+                }
+                self.cropImage = cropImages
+            } catch {
+                print("getUIImage error: \(error)")
             }
         }
     }
     
-    func getUIImage(index: Int) -> UIImage {
-        switch dataType {
-        case .data:
-            if let data = image[safe: index] as? Data, let image = UIImage(data: data) {
+    @MainActor
+    func getUIImage(item: DataType) async throws -> UIImage {
+        switch item {
+        case let imageData as Data:
+            if let image = UIImage(data: imageData) {
                 return image
+            } else {
+                return .init()
             }
-        case .image:
-            if let image = image[safe: index] as? UIImage {
-                return image
+        case let oriImage as UIImage:
+            return oriImage
+        case let urlString as String:
+            if let url = URL(string: urlString) {
+                let (data , _) = try await URLSession.shared.data(from: url)
+                
+                if let image = UIImage(data: data) {
+                    return image
+                } else {
+                    return .init()
+                }
+            } else {
+                return .init()
             }
-        case .url:
-            if let urlString = image[safe: selection] as? String,
-               let url = URL(string: urlString),
-               let data = try? Data(contentsOf: url),
-               let image = UIImage(data: data) {
-                return image
-            }
+        default:
+            return .init()
         }
-        
-        return .init()
+    }
+    
+    func getCount() -> String {
+        if cropImage.count > 0 {
+            return "\(selection + 1)/\(cropImage.count)"
+        } else {
+            return "0/0"
+        }
+    }
+    
+    func onCompleted(_ items: @escaping (([UIImage]) -> Void)) -> ImageSlideView<DataType> {
+        var view: ImageSlideView<DataType> = self
+        view.onCompleteClosure = items
+        return view
     }
 }
 
 
 #Preview {
-    ImageSlideView<String>(image: [
+    ImageSlideView(isPresented: .constant(false), item: [
         "https://blog.kakaocdn.net/dn/ccQnmC/btrqbGYaDhI/BIYbAn8lfuHr9PHH3KFUgk/img.png",
         "https://upload3.inven.co.kr/upload/2023/06/17/bbs/i13155390803.webp?MW=360"
 //        UIImage(named: "도화가3")!,
 //        UIImage(named: "도화가4")!
-    ], dataType: .url)
+    ])
 }
 
-extension Collection {
+extension Sequence {
+    func asyncMap<T>(
+        _ transform: (Element) async throws -> T
+    ) async rethrows -> [T] {
+        var values = [T]()
 
-    /// Returns the element at the specified index if it is within bounds, otherwise nil.
-    subscript (safe index: Index) -> Element? {
-        return indices.contains(index) ? self[index] : nil
+        for element in self {
+            try await values.append(transform(element))
+        }
+
+        return values
     }
 }
