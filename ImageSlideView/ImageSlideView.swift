@@ -7,11 +7,13 @@
 //
 
 import SwiftUI
+import Mantis
+import Kingfisher
 
 public enum ImageSlideDataType {
     case data
     case image
-//    case url
+    case url
 }
 
 public struct ImageSlideView<DataType: Sendable>: View {
@@ -20,6 +22,7 @@ public struct ImageSlideView<DataType: Sendable>: View {
     @State private var selection: Int = 0
     @State private var cropImage: [UIImage] = []
     @State private var isPresented: Bool = false
+//    @State private var
 //    @State private var selectedImage:
     let image: [DataType]
     
@@ -62,7 +65,9 @@ public struct ImageSlideView<DataType: Sendable>: View {
             
             TabView(selection: $selection) {
                 ForEach(0..<image.count, id: \.self) { index in
-                    getImage(index: index)
+                    Image(uiImage: getUIImage(index: index))
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
                         .overlay(alignment: .bottom) {
                             Text("수정하기")
                                 .foregroundStyle(.mint)
@@ -84,45 +89,90 @@ public struct ImageSlideView<DataType: Sendable>: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.black)
-//        .fullScreenCover(isPresented: $isPresented) {
-//            ImageCropView(image: image[selection])
-//        }
+        .fullScreenCover(isPresented: $isPresented) {
+            ImageCropView(image: getUIImage(index: selection))
+        }
     }
     
     @ViewBuilder
     func getImage(index: Int) -> some View {
         switch dataType {
         case .data:
-            if let data = image[index] as? Data, let image = UIImage(data: data) {
+            if let data = image[safe: index] as? Data, let image = UIImage(data: data) {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
+                    .onAppear {
+                        cropImage.append(image)
+                    }
             } else {
                 EmptyView()
             }
         case .image:
-            if let image = image[index] as? UIImage {
+            if let image = image[safe: index] as? UIImage {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
+                    .onAppear {
+                        cropImage.append(image)
+                    }
             } else {
                 EmptyView()
             }
-//        case .url:
-//            if let urlString = image[index] as? String,
-//            let url = URL(string: urlString) {
-//                
-//            } else {
-//                EmptyView()
-//            }
+        case .url:
+            if let urlString = image[safe: selection] as? String,
+               let url = URL(string: urlString),
+               let data = try? Data(contentsOf: url),
+               let uiImage = UIImage(data: data) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .onAppear {
+                        cropImage.append(uiImage)
+                    }
+            } else {
+                EmptyView()
+            }
         }
+    }
+    
+    func getUIImage(index: Int) -> UIImage {
+        switch dataType {
+        case .data:
+            if let data = image[safe: index] as? Data, let image = UIImage(data: data) {
+                return image
+            }
+        case .image:
+            if let image = image[safe: index] as? UIImage {
+                return image
+            }
+        case .url:
+            if let urlString = image[safe: selection] as? String,
+               let url = URL(string: urlString),
+               let data = try? Data(contentsOf: url),
+               let image = UIImage(data: data) {
+                return image
+            }
+        }
+        
+        return .init()
     }
 }
 
 
 #Preview {
-    ImageSlideView<UIImage>(image: [
-        UIImage(named: "도화가3")!,
-        UIImage(named: "도화가4")!
-    ], dataType: .image)
+    ImageSlideView<String>(image: [
+        "https://blog.kakaocdn.net/dn/ccQnmC/btrqbGYaDhI/BIYbAn8lfuHr9PHH3KFUgk/img.png",
+        "https://upload3.inven.co.kr/upload/2023/06/17/bbs/i13155390803.webp?MW=360"
+//        UIImage(named: "도화가3")!,
+//        UIImage(named: "도화가4")!
+    ], dataType: .url)
+}
+
+extension Collection {
+
+    /// Returns the element at the specified index if it is within bounds, otherwise nil.
+    subscript (safe index: Index) -> Element? {
+        return indices.contains(index) ? self[index] : nil
+    }
 }

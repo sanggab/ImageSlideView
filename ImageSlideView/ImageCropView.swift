@@ -8,6 +8,7 @@
 
 import SwiftUI
 import Mantis
+import Kingfisher
 
 struct ImageCropView: UIViewControllerRepresentable {
     
@@ -17,6 +18,7 @@ struct ImageCropView: UIViewControllerRepresentable {
         var config = Mantis.Config()
         config.cropShapeType = .rect
         config.presetFixedRatioType = .alwaysUsingOnePresetFixedRatio(ratio: 4.0 / 3.0)
+//        let image = UIImage
         let cropViewController = Mantis.cropViewController(image: image, config: config)
         cropViewController.delegate = context.coordinator
         return cropViewController
@@ -45,6 +47,7 @@ struct ImageCropView: UIViewControllerRepresentable {
         
         func cropViewControllerDidCancel(_ cropViewController: Mantis.CropViewController, original: UIImage) {
             print("\(#function) original: \(original)")
+            cropViewController.dismiss(animated: true)
         }
         
         func cropViewControllerDidBeginResize(_ cropViewController: Mantis.CropViewController) {
@@ -55,6 +58,7 @@ struct ImageCropView: UIViewControllerRepresentable {
             print("\(#function) cropViewController: \(cropViewController)")
             print("\(#function) original: \(original)")
             print("\(#function) cropInfo: \(cropInfo)")
+//            cropViewController.dismiss(animated: true)
         }
         
         
